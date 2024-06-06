@@ -2,7 +2,7 @@
 /// @brief [edge arrow shapes](https://graphviz.org/doc/info/arrows.html)
 /// @ingroup common_render
 /*************************************************************************
- * Copyright (c) 2011 AT&T Intellectual Property 
+ * Copyright (c) 2011 AT&T Intellectual Property
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -43,6 +43,9 @@
 #define ARR_TYPE_DOT      6
 #define ARR_TYPE_CURVE    7
 #define ARR_TYPE_GAP      8
+/* OPC UA arrow types */
+#define ARR_TYPE_HASCOMPONENT      9
+#define ARR_TYPE_HASPROPERTY      10
 /* Spare: 9-15 */
 
 /* arrow mods (in (BITS_PER_ARROW - BITS_PER_ARROW_TYPE) bits) */
@@ -110,6 +113,8 @@ static const arrowname_t Arrownames[] = {
     {"mpty", ARR_TYPE_NORM},
     {"curve", ARR_TYPE_CURVE},
     {"icurve", (ARR_TYPE_CURVE | ARR_MOD_INV)},
+    {"hascomponent", ARR_TYPE_HASCOMPONENT},
+    {"hasproperty", ARR_TYPE_HASPROPERTY},
     {0}
 };
 
@@ -132,6 +137,8 @@ static pointf arrow_type_diamond(GVJ_t * job, pointf p, pointf u, double arrowsi
 static pointf arrow_type_dot(GVJ_t * job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
 static pointf arrow_type_curve(GVJ_t * job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
 static pointf arrow_type_gap(GVJ_t * job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
+static pointf arrow_type_hascomponent(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
+static pointf arrow_type_hasproperty(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
 
 static double arrow_length_generic(double lenfact, double arrowsize, double penwidth, uint32_t flag);
 static double arrow_length_crow(double lenfact, double arrowsize, double penwidth, uint32_t flag);
@@ -151,6 +158,8 @@ static const arrowtype_t Arrowtypes[] = {
     {ARR_TYPE_DOT, 0.8, arrow_type_dot, arrow_length_dot},
     {ARR_TYPE_CURVE, 1.0, arrow_type_curve, arrow_length_curve},
     {ARR_TYPE_GAP, 0.5, arrow_type_gap, arrow_length_generic},
+    {ARR_TYPE_HASPROPERTY, 0.5, arrow_type_hasproperty, arrow_length_generic},
+    {ARR_TYPE_HASCOMPONENT, 0.5, arrow_type_hascomponent, arrow_length_generic},
 };
 
 static const size_t Arrowtypes_size =
@@ -875,6 +884,78 @@ static pointf arrow_type_tee(GVJ_t *job, pointf p, pointf u, double arrowsize,
     return q;
 }
 
+static pointf arrow_type_hascomponent(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag)
+{
+    (void)arrowsize;
+
+    pointf v, q, a[2];
+
+    // Calculate perpendicular vector
+    v.x = -u.y;
+    v.y = u.x;
+
+    // Calculate the end point of the arrow
+    q.x = p.x + u.x;
+    q.y = p.y + u.y;
+
+    // Define the points of crossling line
+    a[0].x = p.x + u.x * 1.0 + v.x * 1.0;
+    a[0].y = p.y + u.y * 1.0 + v.y * 1.0;
+    a[1].x = p.x + u.x * 1.0 - v.x * 1.0;
+    a[1].y = p.y + u.y * 1.0 - v.y * 1.0;
+
+    // Render the line
+    gvrender_polyline(job, a, 2);
+
+    // Render the shaft of the arrow
+    a[0] = p;
+    a[1] = q;
+    gvrender_polyline(job, a, 2);
+
+    // Return the end point of the arrow
+    return q;
+}
+
+static pointf arrow_type_hasproperty(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag)
+{
+    (void)arrowsize;
+
+    pointf v, q, a[2];
+
+    // Calculate perpendicular vector
+    v.x = -u.y;
+    v.y = u.x;
+
+    // Calculate the end point of the arrow
+    q.x = p.x + u.x;
+    q.y = p.y + u.y;
+
+    // Define the points of crossling line
+    a[0].x = p.x + u.x * 1.0 + v.x * 1.0;
+    a[0].y = p.y + u.y * 1.0 + v.y * 1.0;
+    a[1].x = p.x + u.x * 1.0 - v.x * 1.0;
+    a[1].y = p.y + u.y * 1.0 - v.y * 1.0;
+
+    // Render the line
+    gvrender_polyline(job, a, 2);
+
+    a[0].x = p.x + u.x * 2.0 + v.x * 1.0;
+    a[0].y = p.y + u.y * 2.0 + v.y * 1.0;
+    a[1].x = p.x + u.x * 2.0 - v.x * 1.0;
+    a[1].y = p.y + u.y * 2.0 - v.y * 1.0;
+
+    // Render the 2nd line
+    gvrender_polyline(job, a, 2);
+
+    // Render the shaft of the arrow
+    a[0] = p;
+    a[1] = q;
+    gvrender_polyline(job, a, 2);
+
+    // Return the end point of the arrow
+    return q;
+}
+
 static pointf arrow_type_box(GVJ_t *job, pointf p, pointf u, double arrowsize,
                              double penwidth, uint32_t flag) {
     (void)arrowsize;
@@ -1060,8 +1141,8 @@ static pointf arrow_type_curve(GVJ_t *job, pointf p, pointf u, double arrowsize,
     }
 
     q.x = p.x + u.x;
-    q.y = p.y + u.y; 
-    v.x = -u.y * arrowwidth; 
+    q.y = p.y + u.y;
+    v.x = -u.y * arrowwidth;
     v.y = u.x * arrowwidth;
     w.x = v.y; // same direction as u, same magnitude as v.
     w.y = -v.x;
@@ -1148,7 +1229,7 @@ boxf arrow_bb(pointf p, pointf u, double arrowsize)
     bb.UR.y = fmax(ay, fmax(by, fmax(cy, dy)));
     bb.LL.x = fmin(ax, fmin(bx, fmin(cx, dx)));
     bb.LL.y = fmin(ay, fmin(by, fmin(cy, dy)));
- 
+
     return bb;
 }
 
