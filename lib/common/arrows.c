@@ -45,7 +45,9 @@
 #define ARR_TYPE_GAP      8
 /* OPC UA arrow types */
 #define ARR_TYPE_HASCOMPONENT      9
-#define ARR_TYPE_HASPROPERTY      10
+#define ARR_TYPE_HASPROPERTY       10
+#define ARR_TYPE_HASSUBTYPE        11
+#define ARR_TYPE_HASTYPEDEFINITION 12
 /* Spare: 9-15 */
 
 /* arrow mods (in (BITS_PER_ARROW - BITS_PER_ARROW_TYPE) bits) */
@@ -115,6 +117,8 @@ static const arrowname_t Arrownames[] = {
     {"icurve", (ARR_TYPE_CURVE | ARR_MOD_INV)},
     {"hascomponent", ARR_TYPE_HASCOMPONENT},
     {"hasproperty", ARR_TYPE_HASPROPERTY},
+    {"hassubtype", ARR_TYPE_HASSUBTYPE},
+    {"hastypedefinition", ARR_TYPE_HASTYPEDEFINITION},
     {0}
 };
 
@@ -139,6 +143,8 @@ static pointf arrow_type_curve(GVJ_t * job, pointf p, pointf u, double arrowsize
 static pointf arrow_type_gap(GVJ_t * job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
 static pointf arrow_type_hascomponent(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
 static pointf arrow_type_hasproperty(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
+static pointf arrow_type_hassubtype(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
+static pointf arrow_type_hastypedefinition(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag);
 
 static double arrow_length_generic(double lenfact, double arrowsize, double penwidth, uint32_t flag);
 static double arrow_length_crow(double lenfact, double arrowsize, double penwidth, uint32_t flag);
@@ -160,6 +166,8 @@ static const arrowtype_t Arrowtypes[] = {
     {ARR_TYPE_GAP, 0.5, arrow_type_gap, arrow_length_generic},
     {ARR_TYPE_HASPROPERTY, 0.5, arrow_type_hasproperty, arrow_length_generic},
     {ARR_TYPE_HASCOMPONENT, 0.5, arrow_type_hascomponent, arrow_length_generic},
+    {ARR_TYPE_HASSUBTYPE, 1.6, arrow_type_hassubtype, arrow_length_generic},
+    {ARR_TYPE_HASTYPEDEFINITION, 1.6, arrow_type_hastypedefinition, arrow_length_generic},
 };
 
 static const size_t Arrowtypes_size =
@@ -954,6 +962,90 @@ static pointf arrow_type_hasproperty(GVJ_t *job, pointf p, pointf u, double arro
 
     // Return the end point of the arrow
     return q;
+}
+
+static pointf arrow_type_hassubtype(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag)
+{
+    (void)arrowsize;
+
+    pointf v, a1[3], a2[3];
+
+    // Calculate perpendicular vector
+    v.x = -u.y;
+    v.y = u.x;
+
+    // Scale the unit vector `u` and perpendicular vector `v` by a factor for arrow size
+    double scale = 0.5;
+    u.x *= scale;
+    u.y *= scale;
+    v.x *= 0.25;
+    v.y *= 0.25;
+
+    // Define the points of the first triangle (arrowhead)
+    a1[0] = p; // Tip of the first triangle
+    a1[1].x = p.x + u.x + v.x;
+    a1[1].y = p.y + u.y + v.y;
+    a1[2].x = p.x + u.x - v.x;
+    a1[2].y = p.y + u.y - v.y;
+
+    // Define the points of the second triangle (behind the first one)
+    a2[0].x = p.x + u.x; // Tip of the second triangle
+    a2[0].y = p.y + u.y;
+    a2[1].x = p.x + 2 * u.x + v.x;
+    a2[1].y = p.y + 2 * u.y + v.y;
+    a2[2].x = p.x + 2 * u.x - v.x;
+    a2[2].y = p.y + 2 * u.y - v.y;
+
+    // Render the first triangle
+    gvrender_polygon(job, a1, 3, 0);
+
+    // Render the second triangle
+    gvrender_polygon(job, a2, 3, 0);
+
+    // Return the starting point of the arrow
+    return p;
+}
+
+static pointf arrow_type_hastypedefinition(GVJ_t *job, pointf p, pointf u, double arrowsize, double penwidth, uint32_t flag)
+{
+    (void)arrowsize;
+
+    pointf v, a1[3], a2[3];
+
+    // Calculate perpendicular vector
+    v.x = -u.y;
+    v.y = u.x;
+
+    // Scale the unit vector `u` and perpendicular vector `v` by a factor for arrow size
+    double scale = 0.5;
+    u.x *= scale;
+    u.y *= scale;
+    v.x *= 0.25;
+    v.y *= 0.25;
+
+    // Define the points of the first triangle (arrowhead)
+    a1[0] = p; // Tip of the first triangle
+    a1[1].x = p.x + u.x + v.x;
+    a1[1].y = p.y + u.y + v.y;
+    a1[2].x = p.x + u.x - v.x;
+    a1[2].y = p.y + u.y - v.y;
+
+    // Define the points of the second triangle (behind the first one)
+    a2[0].x = p.x + u.x; // Tip of the second triangle
+    a2[0].y = p.y + u.y;
+    a2[1].x = p.x + 2 * u.x + v.x;
+    a2[1].y = p.y + 2 * u.y + v.y;
+    a2[2].x = p.x + 2 * u.x - v.x;
+    a2[2].y = p.y + 2 * u.y - v.y;
+
+    // Render the first triangle
+    gvrender_polygon(job, a1, 3, 1);
+
+    // Render the second triangle
+    gvrender_polygon(job, a2, 3, 1);
+
+    // Return the starting point of the arrow
+    return p;
 }
 
 static pointf arrow_type_box(GVJ_t *job, pointf p, pointf u, double arrowsize,
